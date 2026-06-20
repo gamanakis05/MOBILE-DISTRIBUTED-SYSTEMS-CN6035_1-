@@ -7,7 +7,6 @@ const asyncHandler = require('../middlewares/asyncHandler');
 const createReservation = asyncHandler(async (req, res) => {
   const { showtimeId, items } = req.body;
   const userId = req.user.userId;
-  console.log('🎫 Creating reservation for userId:', userId, 'req.user:', req.user);
 
   const reservation = await reservationService.createReservation(userId, { showtimeId, items });
 

@@ -19,7 +19,7 @@ const authenticate = (req, res, next) => {
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return next(new AppError('Token expired.', 401, 'TOKEN_EXPIRED'));
+      return next(new AppError('Token expired.', 401));
     }
     return next(new AppError('Invalid token.', 401));
   }
@@ -27,7 +27,6 @@ const authenticate = (req, res, next) => {
 
 /**
  * Restricts route to admin role only.
- * Must be used AFTER authenticate.
  */
 const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {

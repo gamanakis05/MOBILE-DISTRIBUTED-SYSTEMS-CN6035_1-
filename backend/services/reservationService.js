@@ -44,7 +44,7 @@ const createReservation = async (userId, { showtimeId, items }) => {
         unitPrice: item.unitPrice
       });
 
-      await SeatModel.updateReservedSeats(conn, item.categoryId, item.quantity);
+      await SeatModel.updateReservedSeats(item.categoryId, item.quantity);
     }
 
     await conn.commit();
@@ -76,20 +76,14 @@ const cancelReservation = async (userId, userRole, reservationId) => {
     if (reservation.status === 'cancelled') {
       throw new AppError('Reservation already cancelled.', 400);
     }
-    const now = new Date();
-    const startsAt = new Date(reservation.starts_at);
-    if (startsAt < now) {
+    if (new Date(reservation.starts_at) < new Date()) {
       throw new AppError('Cannot cancel past reservations.', 400);
-    }
-    const hoursUntilShow = (startsAt - now) / (1000 * 60 * 60);
-    if (hoursUntilShow < 24) {
-      throw new AppError('Cancellation is only allowed up to 24 hours before the show.', 400);
     }
 
     // Release seats
     const items = await ReservationModel.findItemsByReservationId(reservationId);
     for (const item of items) {
-      await SeatModel.updateReservedSeats(conn, item.category_id, -item.quantity);
+      await SeatModel.updateReservedSeats(item.category_id, -item.quantity);
     }
 
     await ReservationModel.updateStatus(conn, reservationId, 'cancelled');

@@ -11,12 +11,7 @@ const getShowById = async (id) => {
   return show;
 };
 
-const getUpcomingShows = async () => {
-  return await ShowModel.findUpcoming();
-};
-
 module.exports = {
   getShows,
   getShowById,
-  getUpcomingShows,
 };

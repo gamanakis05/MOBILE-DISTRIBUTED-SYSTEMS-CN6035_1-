@@ -11,13 +11,6 @@ const router = express.Router();
 router.get('/', showsController.getShows);
 
 /**
- * @route   GET /api/shows/upcoming
- * @desc    Get upcoming shows with future showtimes
- * @access  Public
- */
-router.get('/upcoming', showsController.getUpcomingShows);
-
-/**
  * @route   GET /api/shows/:id
  * @desc    Get show by ID
  * @access  Public

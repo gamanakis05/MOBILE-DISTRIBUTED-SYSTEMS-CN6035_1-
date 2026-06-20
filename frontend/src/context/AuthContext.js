@@ -5,43 +5,25 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user,    setUser]    = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore session on app start
   useEffect(() => {
-    (async () => {
+    const restore = async () => {
       try {
-        const token        = await SecureStore.getItemAsync('accessToken');
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
-
-        if (!token && !refreshToken) {
-          setLoading(false);
-          return;
-        }
-
-        try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (token) {
           const { data } = await api.get('/user/profile');
-          setUser(data.data || data);
-        } catch (err) {
-          if (refreshToken) {
-            try {
-              const { data } = await api.post('/auth/refresh', { refreshToken });
-              await SecureStore.setItemAsync('accessToken',  data.data.accessToken);
-              await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
-              setUser(data.data.user);
-            } catch {
-              await clearTokens();
-            }
-          } else {
-            await clearTokens();
-          }
+          setUser(data);
         }
       } catch {
         await clearTokens();
       } finally {
         setLoading(false);
       }
-    })();
+    };
+    restore();
   }, []);
 
   const clearTokens = async () => {
@@ -51,26 +33,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    await SecureStore.setItemAsync('accessToken',  data.data.accessToken);
-    await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
-    setUser(data.data.user);
-    return data.data.user;
+    const response = await api.post('/auth/login', { email, password });
+    const { accessToken, refreshToken, user } = response.data.data;
+    await SecureStore.setItemAsync('accessToken', accessToken);
+    await SecureStore.setItemAsync('refreshToken', refreshToken);
+    setUser(user);
+    return user;
   };
 
   const register = async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password });
-    await SecureStore.setItemAsync('accessToken',  data.data.accessToken);
-    await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
-    setUser(data.data.user);
-    return data.data.user;
+    const response = await api.post('/auth/register', { name, email, password });
+    const { accessToken, refreshToken, user } = response.data.data;
+    await SecureStore.setItemAsync('accessToken', accessToken);
+    await SecureStore.setItemAsync('refreshToken', refreshToken);
+    setUser(user);
+    return user;
   };
 
   const logout = async () => {
-    try {
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
-      await api.post('/auth/logout', { refreshToken });
-    } catch {}
+    // Clear tokens locally (no backend logout endpoint)
     await clearTokens();
   };
 

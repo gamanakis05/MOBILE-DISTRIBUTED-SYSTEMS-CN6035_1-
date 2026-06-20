@@ -1,105 +1,90 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, StyleSheet, FlatList,
   TextInput, ActivityIndicator, RefreshControl,
   TouchableOpacity, ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
-import { useOfflineCache } from '../hooks/useOfflineCache';
 import { Card, Badge, EmptyState } from '../components/UI';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { testConnection } from '../utils/connectionTest';
 
 export default function HomeScreen({ navigation }) {
-  const [search,          setSearch]          = useState('');
+  const [shows,      setShows]      = useState([]);
+  const [theatres,   setTheatres]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search,     setSearch]     = useState('');
   const [selectedTheatre, setSelectedTheatre] = useState(null);
-  const [testingConnection, setTestingConnection] = useState(false);
+  const [error,  setError]  = useState(null);
 
-  const theatresFetcher = useCallback(
-    () => api.get('/theatres').then(r => r.data.data || []),
-    []
-  );
-  const showsFetcher = useCallback(
-    () => {
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
       const params = {};
       if (search)          params.title     = search;
       if (selectedTheatre) params.theatreId = selectedTheatre;
-      return api.get('/shows', { params }).then(r => r.data.data || []);
-    },
-    [search, selectedTheatre]
-  );
 
-  const {
-    data: theatres, loading: theatresLoading,
-  } = useOfflineCache('cache_theatres', theatresFetcher);
-
-  const {
-    data: shows, loading: showsLoading, error,
-    isOffline, refresh,
-  } = useOfflineCache(`cache_shows_${search}_${selectedTheatre}`, showsFetcher);
-
-  const loading    = theatresLoading || showsLoading;
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
-  };
-
-  const handleConnectionTest = async () => {
-    setTestingConnection(true);
-    const result = await testConnection();
-    setTestingConnection(false);
-    
-    if (result.success) {
-      alert(`✅ Σύνδεση επιτυχής!\n\n${result.message}\nTheatres: ${result.theatresCount}`);
-    } else {
-      alert(`❌ Σφάλμα σύνδεσης!\n\n${result.message}\n\n${result.suggestions ? 'Προτάσεις:\n' + result.suggestions.join('\n') : ''}`);
+      const [showsRes, theatresRes] = await Promise.all([
+        api.get('/shows', { params }),
+        api.get('/theatres'),
+      ]);
+      setShows(showsRes.data.data);
+      setTheatres(theatresRes.data.data);
+    } catch (err) {
+      setError('Αδυναμία φόρτωσης δεδομένων.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, [search, selectedTheatre]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchData, 300); // debounce search
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
   };
 
   const renderTheatreFilter = () => (
-    <View style={styles.filterWrapper}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterContent}
-        bounces={false}
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.filterRow}
+      contentContainerStyle={styles.filterContent}
+    >
+      <TouchableOpacity
+        style={[styles.filterChip, !selectedTheatre && styles.filterChipActive]}
+        onPress={() => setSelectedTheatre(null)}
       >
-        {/* "Όλα" chip */}
+        <Text style={[styles.filterChipText, !selectedTheatre && styles.filterChipTextActive]}>
+          Όλα
+        </Text>
+      </TouchableOpacity>
+      {theatres.map(t => (
         <TouchableOpacity
-          style={[styles.filterChip, !selectedTheatre && styles.filterChipActive]}
-          onPress={() => setSelectedTheatre(null)}
-          activeOpacity={0.75}
+          key={t.theatre_id}
+          style={[styles.filterChip, selectedTheatre === t.theatre_id && styles.filterChipActive, { maxWidth: 160 }]}
+          onPress={() => setSelectedTheatre(
+            selectedTheatre === t.theatre_id ? null : t.theatre_id
+          )}
         >
-          <Text style={[styles.filterChipText, !selectedTheatre && styles.filterChipTextActive]}>
-            Όλα
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedTheatre === t.theatre_id && styles.filterChipTextActive,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {t.name}
           </Text>
         </TouchableOpacity>
-
-        {theatres.map(t => {
-          const isActive = selectedTheatre === t.theatre_id;
-          return (
-            <TouchableOpacity
-              key={t.theatre_id}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
-              onPress={() => setSelectedTheatre(isActive ? null : t.theatre_id)}
-              activeOpacity={0.75}
-            >
-              <Text
-                style={[styles.filterChipText, isActive && styles.filterChipTextActive]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {t.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
+      ))}
+    </ScrollView>
   );
 
   const renderShow = ({ item }) => (
@@ -110,27 +95,19 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.showHeader}>
         <View style={styles.showInfo}>
           <Text style={styles.showTitle} numberOfLines={2}>{item.title}</Text>
-          <View style={styles.theatreRow}>
-            <Ionicons name="location-sharp" size={12} color={Colors.secondary} />
-            <Text style={styles.theatreName}>{item.theatre_name}</Text>
-          </View>
+          <Text style={styles.theatreName}>📍 {item.theatre_name}</Text>
           <Text style={styles.location}>{item.theatre_location}</Text>
         </View>
         <View style={styles.showMeta}>
           <Badge label={item.age_rating} color={Colors.secondary} />
-          <View style={styles.durationRow}>
-            <Ionicons name="time-outline" size={12} color={Colors.textSecondary} />
-            <Text style={styles.duration}>{item.duration} λεπτά</Text>
-          </View>
+          <Text style={styles.duration}>⏱ {item.duration} λεπτά</Text>
         </View>
       </View>
       {item.description && (
         <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
       )}
       <View style={styles.bookBtn}>
-        <Ionicons name="ticket-outline" size={14} color={Colors.accent} />
-        <Text style={styles.bookBtnText}>Κράτηση Θέσης</Text>
-        <Ionicons name="arrow-forward" size={14} color={Colors.accent} />
+        <Text style={styles.bookBtnText}>Κράτηση Θέσης →</Text>
       </View>
     </Card>
   );
@@ -148,7 +125,7 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       {/* Search bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={16} color={Colors.textSecondary} />
+        <Ionicons name="search" size={16} color={Colors.textSecondary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Αναζήτηση παράστασης..."
@@ -158,40 +135,16 @@ export default function HomeScreen({ navigation }) {
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+            <Ionicons name="close" size={14} color={Colors.textSecondary} style={styles.clearSearch} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Filter bar */}
       {renderTheatreFilter()}
-
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={14} color={Colors.textLight} />
-          <Text style={styles.offlineText}>Offline — εμφάνιση αποθηκευμένων δεδομένων</Text>
-        </View>
-      )}
 
       {error && (
         <View style={styles.errorBanner}>
-          <View style={styles.errorContent}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.testButton} 
-              onPress={handleConnectionTest}
-              disabled={testingConnection}
-            >
-              {testingConnection ? (
-                <ActivityIndicator size="small" color={Colors.textLight} />
-              ) : (
-                <>
-                  <Ionicons name="wifi-outline" size={14} color={Colors.textLight} />
-                  <Text style={styles.testButtonText}>Test Connection</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
@@ -200,9 +153,7 @@ export default function HomeScreen({ navigation }) {
         keyExtractor={i => String(i.show_id)}
         renderItem={renderShow}
         contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
         ListEmptyComponent={<EmptyState message="Δεν βρέθηκαν παραστάσεις." />}
       />
     </View>
@@ -219,102 +170,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.surface,
     margin: Spacing.md,
-    marginBottom: Spacing.sm,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
+  searchIcon:  { fontSize: 16, marginRight: Spacing.sm },
   searchInput: { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  clearSearch: { fontSize: 14, color: Colors.textSecondary, paddingLeft: Spacing.sm },
 
-  // ── Filter bar ──────────────────────────────────────────────
-  filterWrapper: {
-    // Ορίζουμε σταθερό ύψος ώστε να μην "πηδάει" η λίστα
-    height: 48,
-    marginBottom: 4,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.sm,
-    // Δεν βάζουμε flexDirection: 'row' — το ScrollView horizontal το κάνει αυτόματα
-  },
+  filterRow:    { maxHeight: 48 },
+  filterContent: { paddingHorizontal: Spacing.md, gap: Spacing.sm, alignItems: 'center' },
   filterChip: {
-    // maxWidth ώστε τα μεγάλα ονόματα να κόβονται με "..." και όχι να εξαφανίζονται
-    maxWidth: 160,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    // Εξασφαλίζουμε ότι το chip δεν συρρικνώνεται
-    flexShrink: 0,
+    marginRight: Spacing.sm,
   },
-  filterChipActive:     { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  filterChipText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-    // Εμποδίζουμε το wrap
-    flexShrink: 1,
-  },
+  filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  filterChipText:       { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   filterChipTextActive: { color: Colors.textLight },
 
-  // ── Show cards ───────────────────────────────────────────────
-  list:       { padding: Spacing.md, paddingTop: Spacing.sm },
-  showCard:   { marginBottom: Spacing.md },
+  list: { padding: Spacing.md, paddingTop: Spacing.sm },
+
+  showCard: { marginBottom: Spacing.md },
   showHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: Spacing.sm,
   },
-  showInfo:    { flex: 1, marginRight: Spacing.md },
-  showTitle:   { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
-  theatreRow:  { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 },
-  theatreName: { fontSize: 13, color: Colors.secondary, fontWeight: '600' },
+  showInfo: { flex: 1, marginRight: Spacing.md },
+  showTitle:   { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
+  theatreName: { fontSize: 13, color: Colors.secondary, fontWeight: '600', marginBottom: 2 },
   location:    { fontSize: 12, color: Colors.textSecondary },
   showMeta:    { alignItems: 'flex-end', gap: 6 },
-  durationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  duration:    { fontSize: 12, color: Colors.textSecondary },
+  duration:    { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
   description: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18, marginBottom: Spacing.sm },
   bookBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.primary + '0d',
+    backgroundColor: Colors.primary + '11',
     borderRadius: BorderRadius.sm,
-    padding: 10,
+    padding: Spacing.sm,
+    alignItems: 'center',
     marginTop: Spacing.xs,
   },
-  bookBtnText:  { color: Colors.accent, fontWeight: '700', fontSize: 13 },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-  },
-  offlineText: { color: Colors.textLight, fontSize: 12, fontWeight: '600' },
-  errorBanner:  { backgroundColor: Colors.error + '18', padding: Spacing.md, marginHorizontal: Spacing.md, borderRadius: BorderRadius.sm },
-  errorContent: { alignItems: 'center', gap: Spacing.sm },
-  errorText:    { color: Colors.error, textAlign: 'center', fontSize: 13 },
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: Colors.error + '30',
-    borderRadius: BorderRadius.sm,
-  },
-  testButtonText: { color: Colors.textLight, fontSize: 11, fontWeight: '600' },
+  bookBtnText: { color: Colors.accent, fontWeight: '700', fontSize: 14 },
+  errorBanner: { backgroundColor: Colors.error + '18', padding: Spacing.md, marginHorizontal: Spacing.md, borderRadius: BorderRadius.sm },
+  errorText:   { color: Colors.error, textAlign: 'center', fontSize: 13 },
 });

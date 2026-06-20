@@ -3,7 +3,6 @@ import {
   View, Text, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, Alert, TouchableOpacity,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/UI';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
@@ -17,8 +16,8 @@ export default function LoginScreen({ navigation }) {
 
   const validate = () => {
     const e = {};
-    if (!email.trim())    e.email    = 'Το email είναι υποχρεωτικό.';
-    if (!password.trim()) e.password = 'Ο κωδικός είναι υποχρεωτικός.';
+    if (!email.trim())    e.email    = 'Email is required.';
+    if (!password.trim()) e.password = 'Password is required.';
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -27,10 +26,11 @@ export default function LoginScreen({ navigation }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await login(email.trim(), password.trim());
-      navigation.goBack();
+      await login(email.trim(), password);
+      navigation.navigate('AppStack');
     } catch (err) {
-      Alert.alert('Αποτυχία Σύνδεσης', err.response?.data?.message || 'Λανθασμένα στοιχεία.');
+      const msg = err.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -42,14 +42,14 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoBox}>
-            <Ionicons name="film" size={40} color={Colors.textLight} />
-          </View>
+          <Text style={styles.logo}>🎭</Text>
           <Text style={styles.title}>TheatreApp</Text>
           <Text style={styles.subtitle}>Κάνε κράτηση για την παράστασή σου</Text>
         </View>
 
+        {/* Form */}
         <View style={styles.form}>
           <Input
             label="Email"
@@ -70,10 +70,20 @@ export default function LoginScreen({ navigation }) {
             autoComplete="password"
             error={errors.password}
           />
-          <Button title="Σύνδεση" onPress={handleLogin} loading={loading} style={styles.loginBtn} />
-          <TouchableOpacity style={styles.registerLink} onPress={() => navigation.navigate('Register')}>
+
+          <Button
+            title="Σύνδεση"
+            onPress={handleLogin}
+            loading={loading}
+            style={styles.loginBtn}
+          />
+
+          <TouchableOpacity
+            style={styles.registerLink}
+            onPress={() => navigation.navigate('Register')}
+          >
             <Text style={styles.registerText}>
-              Δεν έχεις λογαριασμό;{' '}
+              Δεν έχεις λογαριασμό; {' '}
               <Text style={styles.registerHighlight}>Εγγραφή</Text>
             </Text>
           </TouchableOpacity>
@@ -84,20 +94,35 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.primary },
-  scroll:    { flexGrow: 1, justifyContent: 'center', padding: Spacing.lg },
-  header:    { alignItems: 'center', marginBottom: Spacing.xl },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.primary,
   },
-  title:    { fontSize: 30, fontWeight: '800', color: Colors.textLight, letterSpacing: 1 },
-  subtitle: { fontSize: 14, color: Colors.disabled, marginTop: 6, textAlign: 'center' },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  logo: {
+    fontSize: 64,
+    marginBottom: Spacing.sm,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: Colors.textLight,
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.disabled,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
   form: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
@@ -108,8 +133,20 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  loginBtn:         { marginTop: Spacing.sm },
-  registerLink:     { alignItems: 'center', marginTop: Spacing.md, paddingVertical: Spacing.sm },
-  registerText:     { color: Colors.textSecondary, fontSize: 14 },
-  registerHighlight:{ color: Colors.accent, fontWeight: '700' },
+  loginBtn: {
+    marginTop: Spacing.sm,
+  },
+  registerLink: {
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  registerText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+  },
+  registerHighlight: {
+    color: Colors.accent,
+    fontWeight: '700',
+  },
 });

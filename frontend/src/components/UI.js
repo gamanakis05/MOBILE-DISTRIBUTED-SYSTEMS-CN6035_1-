@@ -3,7 +3,6 @@ import {
   TouchableOpacity, Text, ActivityIndicator,
   StyleSheet, View, TextInput,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
 // ─── Button ──────────────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ export const Button = ({ title, onPress, loading, disabled, variant = 'primary',
     >
       {loading
         ? <ActivityIndicator color={isOutline ? Colors.accent : Colors.textLight} />
-        : <Text style={[styles.buttonText, isOutline && styles.buttonTextOutline]}>
+        : <Text style={[styles.buttonText, isOutline && styles.buttonTextOutline, isDanger && styles.buttonTextLight]}>
             {title}
           </Text>
       }
@@ -72,9 +71,9 @@ export const Badge = ({ label, color = Colors.accent }) => (
 export const Divider = ({ style }) => <View style={[styles.divider, style]} />;
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
-export const EmptyState = ({ message }) => (
+export const EmptyState = ({ message, icon = '🎭' }) => (
   <View style={styles.emptyState}>
-    <Ionicons name="search-outline" size={48} color={Colors.disabled} />
+    <Text style={styles.emptyIcon}>{icon}</Text>
     <Text style={styles.emptyText}>{message}</Text>
   </View>
 );
@@ -96,16 +95,24 @@ const styles = StyleSheet.create({
   buttonDanger: {
     backgroundColor: Colors.error,
   },
-  buttonDisabled: { opacity: 0.5 },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   buttonText: {
     color: Colors.textLight,
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-  buttonTextOutline: { color: Colors.accent },
-
-  inputContainer: { marginBottom: Spacing.md },
+  buttonTextOutline: {
+    color: Colors.accent,
+  },
+  buttonTextLight: {
+    color: Colors.textLight,
+  },
+  inputContainer: {
+    marginBottom: Spacing.md,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -122,9 +129,14 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     backgroundColor: Colors.surface,
   },
-  inputError: { borderColor: Colors.error },
-  errorText:  { color: Colors.error, fontSize: 12, marginTop: 4 },
-
+  inputError: {
+    borderColor: Colors.error,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 12,
+    marginTop: 4,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
@@ -136,30 +148,33 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-
   badge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: BorderRadius.full,
     alignSelf: 'flex-start',
   },
-  badgeText: { fontSize: 12, fontWeight: '700' },
-
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
     marginVertical: Spacing.md,
   },
-
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xxl,
-    gap: Spacing.md,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: Spacing.md,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
   },

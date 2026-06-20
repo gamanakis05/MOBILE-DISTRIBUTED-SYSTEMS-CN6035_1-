@@ -9,7 +9,6 @@ const showtimeRoutes    = require('./showtimeRoutes');
 const seatRoutes        = require('./seatRoutes');
 const reservationRoutes = require('./reservationRoutes');
 const userRoutes        = require('./userRoutes');
-const adminRoutes       = require('./adminRoutes');
 
 // Mount routes
 router.use('/auth',         authRoutes);
@@ -19,6 +18,5 @@ router.use('/showtimes',    showtimeRoutes);
 router.use('/seats',        seatRoutes);
 router.use('/reservations', reservationRoutes);
 router.use('/user',         userRoutes);
-router.use('/admin',        adminRoutes);
 
 module.exports = router;

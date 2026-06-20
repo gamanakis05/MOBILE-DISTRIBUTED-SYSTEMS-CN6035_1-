@@ -43,19 +43,6 @@ class ShowModel {
     );
     return rows[0];
   }
-
-  static async findUpcoming() {
-    const sql = `
-      SELECT DISTINCT s.*, t.name AS theatre_name, t.location AS theatre_location
-      FROM shows s
-      JOIN theatres t ON t.theatre_id = s.theatre_id
-      JOIN showtimes st ON st.show_id = s.show_id
-      WHERE st.starts_at >= NOW()
-      ORDER BY st.starts_at ASC
-    `;
-    const [rows] = await db.execute(sql);
-    return rows;
-  }
 }
 
 module.exports = ShowModel;

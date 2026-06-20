@@ -20,8 +20,8 @@ class SeatModel {
     return rows[0];
   }
 
-  static async updateReservedSeats(conn, categoryId, quantity) {
-    await conn.execute(
+  static async updateReservedSeats(categoryId, quantity) {
+    await db.execute(
       'UPDATE seat_categories SET reserved_seats = reserved_seats + ? WHERE category_id = ?',
       [quantity, categoryId]
     );

@@ -1,43 +1,13 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://192.168.1.217:3000/api'; // Change to your server IP for device testing
+const BASE_URL = 'http://localhost:3000/api'; // Change to your server IP for device testing
 
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
-
-// Add request interceptor for debugging
-api.interceptors.request.use(
-  (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    return config;
-  },
-  (error) => {
-    console.log('API Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor for debugging
-api.interceptors.response.use(
-  (response) => {
-    console.log(`API Response: ${response.status} ${response.config.url}`);
-    return response;
-  },
-  (error) => {
-    console.log('API Response Error:', error.message);
-    if (error.response) {
-      console.log(`API Error Status: ${error.response.status}`);
-      console.log(`API Error Data:`, error.response.data);
-    } else if (error.request) {
-      console.log('API Network Error - No response received');
-    }
-    return Promise.reject(error);
-  }
-);
 
 // ── Request interceptor: attach access token ──────────────────────────────
 api.interceptors.request.use(async (config) => {

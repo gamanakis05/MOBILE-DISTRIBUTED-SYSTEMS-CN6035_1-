@@ -17,17 +17,9 @@ const generateAccessToken = (user) => {
   );
 };
 
-const parseExpiry = (exp) => {
-  const match = String(exp).match(/^(\d+)([smhd])$/);
-  if (!match) return 7 * 24 * 60 * 60 * 1000;
-  const n = parseInt(match[1], 10);
-  const unit = { s: 1000, m: 60000, h: 3600000, d: 86400000 }[match[2]];
-  return n * unit;
-};
-
 const generateRefreshToken = async (userId) => {
   const token = uuidv4();
-  const expiresAt = new Date(Date.now() + parseExpiry(REFRESH_EXP));
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   await RefreshTokenModel.create(userId, token, expiresAt);
   return token;
