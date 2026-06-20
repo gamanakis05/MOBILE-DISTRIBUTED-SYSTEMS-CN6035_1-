@@ -1,0 +1,50 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: theatre_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: theatre_db
+      MYSQL_USER: theatre_user
+      MYSQL_PASSWORD: theatre_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: theatre_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: theatre_db
+      DB_USER: theatre_user
+      DB_PASSWORD: theatre_pass
+      JWT_SECRET: your_super_secret_jwt_key_change_in_production
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: your_super_secret_refresh_key_change_in_production
+      JWT_REFRESH_EXPIRES_IN: 90d
+      FRONTEND_URL: http://localhost:8081
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+
+volumes:
+  db_data:
